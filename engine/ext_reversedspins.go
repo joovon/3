@@ -1,15 +1,13 @@
 package engine
 
 import (
-	"math"
-
 	"github.com/mumax/3/cuda"
 	"github.com/mumax/3/data"
 )
 
 var (
 	Ext_ReversedSpins        = NewScalarValue("ext_reversedspins", "", "Reversed spins", GetReversedSpins)
-	Ext_ReversedSpinsDensity = NewScalarField("ext_reversedspins", "1", "Reversed spins density", SetReversedSpinsDensity)
+	Ext_ReversedSpinsDensity = NewScalarField("ext_reversedspinsdensity", "1", "Reversed spins density", SetReversedSpinsDensity)
 )
 
 func SetReversedSpinsDensity(dst *data.Slice) {
