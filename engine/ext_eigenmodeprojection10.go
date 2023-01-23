@@ -10,7 +10,7 @@ package engine
 // 	a_kxn = int_dV {psi_kn (m . delta_mx)}
 //	a_kyn = int_dV {psi_kn (m . delta_my)}
 //
-// with up to 11 modes (n = 0 to 10).
+// with up to 11 modes (n = 0 to A).
 //
 // The user-supplied masks/vector fields can be added in the source .mx3 file with
 //	psi_kn.Add( LoadFile(("psi_kn_file.ovf"),1) )	
@@ -30,6 +30,7 @@ import (
 
 
 var (
+//  Transverse magnetization is already defined in ext_eigenmodeprojection.go
 //	delta_mx	= NewExcitation("delta_mx", "", "Transverse magnetization 1")
 //	delta_my	= NewExcitation("delta_my", "", "Transverse magnetization 2")
 
@@ -43,7 +44,7 @@ var (
 	psi_k7		= NewScalarExcitation("psi_k7", "", "Eigenmode spatial profile")
 	psi_k8		= NewScalarExcitation("psi_k8", "", "Eigenmode spatial profile")
 	psi_k9		= NewScalarExcitation("psi_k9", "", "Eigenmode spatial profile")
-	psi_k10		= NewScalarExcitation("psi_k10", "", "Eigenmode spatial profile")
+	psi_kA		= NewScalarExcitation("psi_kA", "", "Eigenmode spatial profile")
 		
 	a_k0		= NewVectorValue("a_k0", "", "delta_mx projection onto psi_k0", GetModeAmplitudek0 )
 	a_k1		= NewVectorValue("a_k1", "", "delta_my projection onto psi_k1", GetModeAmplitudek1 )
@@ -55,8 +56,7 @@ var (
 	a_k7		= NewVectorValue("a_k7", "", "delta_my projection onto psi_k7", GetModeAmplitudek7 )
 	a_k8		= NewVectorValue("a_k8", "", "delta_my projection onto psi_k8", GetModeAmplitudek8 )
 	a_k9		= NewVectorValue("a_k9", "", "delta_my projection onto psi_k9", GetModeAmplitudek9 )
-	a_k10		= NewVectorValue("a_k10", "", "delta_my projection onto psi_k10", GetModeAmplitudek10 )
-	
+	a_kA		= NewVectorValue("a_kA", "", "delta_my projection onto psi_kA", GetModeAmplitudekA )
 )
 	
 	
@@ -260,10 +260,10 @@ func GetModeAmplitudek9() []float64 {
 	return amp
 }
 
-func GetModeAmplitudek10() []float64 {
+func GetModeAmplitudekA() []float64 {
 
-	sx := Mul(psi_k10, Dot(&M, delta_mx) )
-	sy := Mul(psi_k10, Dot(&M, delta_my) )
+	sx := Mul(psi_kA, Dot(&M, delta_mx) )
+	sy := Mul(psi_kA, Dot(&M, delta_my) )
 		
 	wx := ValueOf(sx)
 	defer cuda.Recycle(wx)	
