@@ -425,11 +425,11 @@ func parseColor(s string) color.RGBA {
 	if c, ok := colors[s]; ok {
 		return c
 	}
-	fmt.Println("refusing to use ugly color '" + s + "', options are:")
+	fmt.Println("Refusing to use ugly color '" + s + "', options are:")
 	for k, _ := range colors {
 		fmt.Println(k)
 	}
-	log.Fatal("illegal color")
+	log.Fatal("Illegal color")
 	return color.RGBA{}
 }
 
