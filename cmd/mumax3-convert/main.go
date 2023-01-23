@@ -472,4 +472,9 @@ var colors = map[string]color.RGBA{
 	"plasma3":     color.RGBA{R: 204, G: 71, B: 120, A: 255},
 	"plasma4":     color.RGBA{R: 126, G: 3, B: 168, A: 255},
 	"plasma5":     color.RGBA{R: 13, G: 8, B: 135, A: 255},
+	"moreland1":   color.RGBA{R: 59, G: 76, B: 92, A: 255},
+	"moreland2":   color.RGBA{R: 137, G: 175, B: 252, A: 255},
+	"moreland3":   color.RGBA{R: 221, G: 221, B: 221, A: 255},
+	"moreland4":   color.RGBA{R: 243, G: 155, B: 125, A: 255},
+	"moreland5":   color.RGBA{R: 180, G: 4, B: 38, A: 255},	
 }
