@@ -31,7 +31,7 @@ var (
 	psi_k		= NewScalarExcitation("psi_k", "", "Eigenmode spatial profile")
 	delta_mx	= NewExcitation("delta_mx", "", "Transverse magnetization 1")
 	delta_my	= NewExcitation("delta_my", "", "Transverse magnetization 2")
-	a_kx		= NewVectorValue("a_kx", "", "delta_mx projection onto psi_k", GetModeAmplitude)
+	a_k		= NewVectorValue("a_k", "", "delta_mx,y projection onto psi_k", GetModeAmplitude)
 )
 	
 	
