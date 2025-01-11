@@ -1,6 +1,6 @@
 package engine
 
-// Mangeto-elastic coupling.
+// Magneto-elastic coupling.
 
 import (
 	"github.com/mumax/3/cuda"
