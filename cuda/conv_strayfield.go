@@ -1,7 +1,7 @@
 package cuda
 
 import (
-	"github.com/mumax/3/cuda/cu"
+	// "github.com/mumax/3/cuda/cu"
 	"github.com/mumax/3/data"
 	"github.com/mumax/3/util"
 )
@@ -27,7 +27,7 @@ func NewStrayField(inputSize, PBC [3]int, kernel [3][3]*data.Slice, test bool) *
 	c.realKernSize = kernel[X][X].Size()
 	c.init(kernel)
 	if test {
-		testConvolution(c, PBC, kernel)
+		testStrayFieldConvolution(c, PBC, kernel)
 	}
 	return c
 }
@@ -84,11 +84,6 @@ func (c *StrayFieldConvolution) exec2D(outp, inp, vol *data.Slice, Msat MSlice) 
 
 func (c *StrayFieldConvolution) is2D() bool {
 	return c.inputSize[Z] == 1
-}
-
-// zero 1-component slice
-func zero1_async(dst *data.Slice) {
-	cu.MemsetD32Async(cu.DevicePtr(uintptr(dst.DevPtr(0))), 0, int64(dst.Len()), stream0)
 }
 
 // forward FFT component i
@@ -196,5 +191,47 @@ func (c *StrayFieldConvolution) Free() {
 		c.bwPlan.Free()
 
 		cudaCtx.SetCurrent()
+	}
+}
+
+// Compares FFT-accelerated convolution against brute-force on sparse data.
+// This is not really needed but very quickly uncovers newly introduced bugs.
+// Copy of testConvolution
+func testStrayFieldConvolution(c *StrayFieldConvolution, PBC [3]int, realKern [3][3]*data.Slice) {
+	if PBC != [3]int{0, 0, 0} {
+		// the brute-force method does not work for pbc.
+		util.Log("skipping convolution self-test for PBC")
+		return
+	}
+	util.Log("//convolution self-test...")
+	inhost := data.NewSlice(3, c.inputSize)
+	initConvTestInput(inhost.Vectors())
+	gpu := NewSlice(3, c.inputSize)
+	defer gpu.Free()
+	data.Copy(gpu, inhost)
+
+	Msat := NewSlice(1, [3]int{1, 1, 256})
+	defer Msat.Free()
+	Memset(Msat, 1)
+
+	vol := data.NilSlice(1, c.inputSize)
+	c.Exec(gpu, gpu, vol, ToMSlice(Msat))
+
+	output := gpu.HostCopy()
+
+	brute := data.NewSlice(3, c.inputSize)
+	bruteConv(inhost.Vectors(), brute.Vectors(), realKern)
+
+	a, b := output.Host(), brute.Host()
+	err := float32(0)
+	for c := range a {
+		for i := range a[c] {
+			if fabs(a[c][i]-b[c][i]) > err {
+				err = fabs(a[c][i] - b[c][i])
+			}
+		}
+	}
+	if err > CONV_TOLERANCE {
+		util.Fatal("convolution self-test tolerance: ", err, " FAIL")
 	}
 }

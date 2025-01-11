@@ -172,7 +172,7 @@ func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float
 					}
 					continue
 				}
-				R[Z] = float64(z) * cellsize[Z] + StrayFieldLift
+				R[Z] = float64(z) * cellsize[Z] + lift
 
 				for y := r1[Y]; y <= r2[Y]; y++ {
 

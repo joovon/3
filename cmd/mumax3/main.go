@@ -170,5 +170,13 @@ func printVersion() {
 	engine.LogOut("********************************************************************//")
 	engine.LogOut("  If you use mumax in any work or publication,                      //")
 	engine.LogOut("  we kindly ask you to cite the references in references.bib        //")
+	engine.LogOut(" ")
+	engine.LogOut("  This version includes the following extensions: ")
+	engine.LogOut("  • arrayfromfile")
+	engine.LogOut("  • ext_eigenmodeprojection(500)")
+	engine.LogOut("  • ext_eigenmodeprojectionReIm(500)")
+	engine.LogOut("  • ext_reversedspins")
+	engine.LogOut("  • functionfromfile")
+	engine.LogOut("  • strayfield")
 	engine.LogOut("********************************************************************//")
 }

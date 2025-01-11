@@ -1,6 +1,9 @@
 package engine
 
-// Calculation of stray field
+// Calculation of stray field at a distance StrayFieldLift above the sample plane.
+// This module is essentially a copy of the demag kernel routines, where we add
+// an additional distance along the z direction for the observation point.
+// Not very original, but very useful!
 
 import (
 	"github.com/mumax/3/cuda"
@@ -8,10 +11,12 @@ import (
 	"github.com/mumax/3/mag"
 )
 
-// stray variables
+// Stray field variables
 var (
 	B_strayfield     = NewVectorField("B_strayfield", "T", "Magnetostatic stray field", SetStrayField)
 	StrayFieldLift    inputValue
+
+	strayfieldconv_   *cuda.StrayFieldConvolution // does the heavy lifting
 )
 
 func init() {
@@ -65,11 +70,11 @@ func setMaskedStrayField(dst *data.Slice, msat cuda.MSlice) {
 
 // returns stray field convolution, making sure it's initialized
 func strayfieldConv() *cuda.StrayFieldConvolution {
-	if conv_ == nil {
+	if strayfieldconv_ == nil {
 		SetBusy(true)
 		defer SetBusy(false)
-		kernel := mag.StrayFieldKernel(Mesh().Size(), Mesh().PBC(), Mesh().CellSize(), StrayFieldLift, *Flag_cachedir)
-		conv_ = cuda.NewStrayField(Mesh().Size(), Mesh().PBC(), kernel, *Flag_selftest)
+		kernel := mag.StrayFieldKernel(Mesh().Size(), Mesh().PBC(), Mesh().CellSize(), StrayFieldLift.v, *Flag_cachedir)
+		strayfieldconv_ = cuda.NewStrayField(Mesh().Size(), Mesh().PBC(), kernel, *Flag_selftest)
 	}
-	return conv_
+	return strayfieldconv_
 }
