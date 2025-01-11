@@ -1,14 +1,11 @@
 package mag
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/mumax/3/data"
-	"github.com/mumax/3/oommf"
 	"github.com/mumax/3/timer"
 	"github.com/mumax/3/util"
 	"math"
-	"os"
 )
 
 // Obtains the stray field kernel either from cacheDir/ or by calculating (and then storing in cacheDir for next time).
@@ -43,7 +40,7 @@ func StrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float64, 
 			if inputSize[Z] == 1 && ((i == X && j == Z) || (i == Y && j == Z)) {
 				continue // element not needed in 2D
 			}
-			kernel[i][j], errLoad = LoadStrayFieldKernel(fmt.Sprint(basename, i, j, ".ovf"))
+			kernel[i][j], errLoad = LoadKernel(fmt.Sprint(basename, i, j, ".ovf"))
 			if errLoad != nil {
 				break
 			}
@@ -75,7 +72,7 @@ func StrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float64, 
 			compName := fmt.Sprint("N_", i, j)
 
 			info := data.Meta{Time: float64(0.0), Name: compName, Unit: "1", CellSize: cellsize, MeshUnit: "m"}
-			errSave = SaveStrayFieldKernel(fmt.Sprint(basename, i, j, ".ovf"), kernel[i][j], info)
+			errSave = SaveKernel(fmt.Sprint(basename, i, j, ".ovf"), kernel[i][j], info)
 			if errSave != nil {
 				break
 			}
@@ -91,22 +88,6 @@ func StrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float64, 
 	}
 
 	return kernel
-}
-
-func LoadStrayFieldKernel(fname string) (kernel *data.Slice, err error) {
-	kernel, _, err = oommf.ReadFile(fname)
-	return
-}
-
-func SaveStrayFieldKernel(fname string, kernel *data.Slice, info data.Meta) error {
-	f, err := os.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-	out := bufio.NewWriter(f)
-	defer out.Flush()
-	oommf.WriteOVF2(out, kernel, info, "binary 4")
-	return nil
 }
 
 // Calculates the magnetostatic kernel by brute-force integration

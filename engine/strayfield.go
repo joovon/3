@@ -15,17 +15,16 @@ import (
 var (
 	B_strayfield     = NewVectorField("B_strayfield", "T", "Magnetostatic stray field", SetStrayField)
 	StrayFieldLift    inputValue
-
-	strayfieldconv_   *cuda.StrayFieldConvolution // does the heavy lifting
+	strayfieldconv_   *cuda.StrayFieldConvolution
 )
 
 func init() {
 
-	StrayFieldLift = numParam(50e-9, "StrayFieldLift", "m", reinitmfmconv)
+	StrayFieldLift = numParam(50e-9, "StrayFieldLift", "m", reinitstrayfieldconv)
 	DeclLValue("StrayFieldLift", &StrayFieldLift, "Stray field lift height")
 }
 
-// Sets dst to the current demag field
+// Sets dst to the current stray field
 func SetStrayField(dst *data.Slice) {
 	if EnableDemag {
 		msat := Msat.MSlice()
@@ -41,7 +40,7 @@ func SetStrayField(dst *data.Slice) {
 	}
 }
 
-// Sets dst to the demag field, but cells where NoDemagSpins != 0 do not generate nor recieve field.
+// Sets dst to the demag field, but cells where NoDemagSpins != 0 do not generate nor receive field.
 func setMaskedStrayField(dst *data.Slice, msat cuda.MSlice) {
 	// No-demag spins: mask-out geometry with zeros where NoDemagSpins is set,
 	// so these spins do not generate a field
@@ -67,7 +66,6 @@ func setMaskedStrayField(dst *data.Slice, msat cuda.MSlice) {
 	cuda.ZeroMask(dst, NoDemagSpins.gpuLUT1(), regions.Gpu())
 }
 
-
 // returns stray field convolution, making sure it's initialized
 func strayfieldConv() *cuda.StrayFieldConvolution {
 	if strayfieldconv_ == nil {
@@ -77,4 +75,11 @@ func strayfieldConv() *cuda.StrayFieldConvolution {
 		strayfieldconv_ = cuda.NewStrayField(Mesh().Size(), Mesh().PBC(), kernel, *Flag_selftest)
 	}
 	return strayfieldconv_
+}
+
+func reinitstrayfieldconv() {
+	SetBusy(true)
+	defer SetBusy(false)
+	kernel := mag.StrayFieldKernel(Mesh().Size(), Mesh().PBC(), Mesh().CellSize(), StrayFieldLift.v, *Flag_cachedir)
+	strayfieldconv_ = cuda.NewStrayField(Mesh().Size(), Mesh().PBC(), kernel, *Flag_selftest)
 }

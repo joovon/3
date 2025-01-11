@@ -93,7 +93,7 @@ func (c *MFMConvolution) Reinit(lift, tipsize float64, cachedir string) {
 	c.initFFTKern3D()
 }
 
-// Initializes a convolution to evaluate the demag field for the given mesh geometry.
+// Initializes a convolution to evaluate the simulated MFM response for the given mesh geometry.
 func NewMFM(mesh *data.Mesh, lift, tipsize float64, cachedir string) *MFMConvolution {
 	k := mag.MFMKernel(mesh, lift, tipsize, cachedir)
 	size := mesh.Size()
