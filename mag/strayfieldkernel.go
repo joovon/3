@@ -92,6 +92,9 @@ func StrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float64, 
 
 // Calculates the magnetostatic kernel by brute-force integration
 // of magnetic charges over the faces and averages over cell volumes.
+// 
+// [13 Jan 2025] At the moment, we use the same cell dimensions for the source and the destination.
+// Ideally, we would like to have the destination (point of observation) to be a point charge ...
 func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float64) (kernel [3][3]*data.Slice) {
 
 	// Add zero-padding in non-PBC directions
