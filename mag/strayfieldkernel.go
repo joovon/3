@@ -143,7 +143,7 @@ func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float
 			var (
 				R, R2  [3]float64 // field and source cell center positions
 				pole   [3]float64 // position of point charge on the surface
-				points int        // counts used integration points
+				// points int        // counts used integration points. For benchmarking, not necessary for function
 			)
 
 			for z := r1[Z]; z <= r2[Z]; z++ {
@@ -185,15 +185,24 @@ func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float
 							d = L
 						}
 						maxSize := d / 6.0 // DemagAccuracy = 6.0; maximum acceptable integration size
-
+						
+						// Number of integration points at source
 						nv := int(math.Max(cellsize[v]/maxSize, 1) + 0.5)
 						nw := int(math.Max(cellsize[w]/maxSize, 1) + 0.5)
+
+						// Number of integration points at destination
+						// In principle, we can consider an infinitesimal volume at the destination, so we
+						// can set this to unity ...
+						/*
 						nx := int(math.Max(cellsize[X]/maxSize, 1) + 0.5)
 						ny := int(math.Max(cellsize[Y]/maxSize, 1) + 0.5)
 						nz := int(math.Max(cellsize[Z]/maxSize, 1) + 0.5)
+						*/
+						nx, ny, nz := 1, 1, 1
+						
 						// Stagger source and destination grids.
-						// Massively improves accuracy, see note.
-						nv *= 2
+						// Massively improves accuracy, see note in demagkernel.go
+						nv *= 2		// nv -> 2*nv
 						nw *= 2
 
 						util.Assert(nv > 0 && nw > 0 && nx > 0 && ny > 0 && nz > 0)
@@ -214,6 +223,10 @@ func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float
 								pole[w] = pw
 
 								// Do volume integral over destination cell
+								// In principle, this should be modified to reflect the delta of the observation point (and not
+								// the cell size). We can dispense of this integral completely by assuming an infinitesimal
+								// cell at the destination
+								/*
 								for α := 0; α < nx; α++ {
 									rx := R[X] - cellsize[X]/2 + cellsize[X]/float64(2*nx) + (cellsize[X]/float64(nx))*float64(α)
 
@@ -222,7 +235,7 @@ func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float
 
 										for γ := 0; γ < nz; γ++ {
 											rz := R[Z] - cellsize[Z]/2 + cellsize[Z]/float64(2*nz) + (cellsize[Z]/float64(nz))*float64(γ)
-											points++
+											// points++
 
 											pole[u] = pu1
 											R2[X], R2[Y], R2[Z] = rx-pole[X], ry-pole[Y], rz-pole[Z]
@@ -243,6 +256,26 @@ func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float
 										}
 									}
 								}
+								*/
+								rx := R[X]
+								ry := R[Y]
+								rz := R[Z]
+
+								pole[u] = pu1
+								R2[X], R2[Y], R2[Z] = rx-pole[X], ry-pole[Y], rz-pole[Z]
+								r := math.Sqrt(R2[X]*R2[X] + R2[Y]*R2[Y] + R2[Z]*R2[Z])
+								qr := charge / (4 * math.Pi * r * r * r)
+								bx := R2[X] * qr
+								by := R2[Y] * qr
+								bz := R2[Z] * qr
+
+								pole[u] = pu2
+								R2[X], R2[Y], R2[Z] = rx-pole[X], ry-pole[Y], rz-pole[Z]
+								r = math.Sqrt(R2[X]*R2[X] + R2[Y]*R2[Y] + R2[Z]*R2[Z])
+								qr = -charge / (4 * math.Pi * r * r * r)
+								B[X] += (bx + R2[X]*qr) // addition ordered for accuracy
+								B[Y] += (by + R2[Y]*qr)
+								B[Z] += (bz + R2[Z]*qr)
 							}
 						}
 						for d := s; d < 3; d++ { // destination index Ksdxyz
