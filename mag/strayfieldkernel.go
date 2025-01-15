@@ -204,7 +204,7 @@ func CalcStrayFieldKernel(inputSize, pbc [3]int, cellsize [3]float64, lift float
 						pu1 := cellsize[u] / 2. // positive pole center
 						pu2 := -pu1             // negative pole center
 
-						// Do surface integral over source cell, accumulate  in B
+						// Do surface integral over source cell, accumulate in B
 						var B [3]float64
 						for i := 0; i < nv; i++ {
 							pv := -(cellsize[v] / 2.) + cellsize[v]/float64(2*nv) + float64(i)*(cellsize[v]/float64(nv))
