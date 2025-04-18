@@ -68,7 +68,7 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r1 = is0(m1)? r0 : regions[i_];                // don't use inter region params if m1=0
         float A1 = aLUT2d[symidx(r0, r1)];                 // inter-region Aex
-        float D1 = dLUT2d[symidx(r0, r1)];                 // inter-region Dex
+        float D1 = DLUT2d[symidx(r0, r1)];                 // inter-region Dex
         if (!is0(m1) || !OpenBC){                          // do nothing at an open boundary
             if (is0(m1)) {                                 // neighbour missing
                 m1.x = m0.x - (-cx * (0.5f*D1/A1) * m0.z); // extrapolate missing m from Neumann BC's
@@ -89,7 +89,7 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r2 = is0(m2)? r0 : regions[i_];
         float A2 = aLUT2d[symidx(r0, r2)];
-        float D2 = dLUT2d[symidx(r0, r2)];
+        float D2 = DLUT2d[symidx(r0, r2)];
         if (!is0(m2) || !OpenBC){
             if (is0(m2)) {
                 m2.x = m0.x - (cx * (0.5f*D2/A2) * m0.z);
@@ -111,7 +111,7 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r1 = is0(m1)? r0 : regions[i_];
         float A1 = aLUT2d[symidx(r0, r1)];
-        float D1 = dLUT2d[symidx(r0, r1)];
+        float D1 = DLUT2d[symidx(r0, r1)];
         if (!is0(m1) || !OpenBC){
             if (is0(m1)) {
                 m1.x = m0.x;
@@ -132,7 +132,7 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r2 = is0(m2)? r0 : regions[i_];
         float A2 = aLUT2d[symidx(r0, r2)];
-        float D2 = dLUT2d[symidx(r0, r2)];
+        float D2 = DLUT2d[symidx(r0, r2)];
         if (!is0(m2) || !OpenBC){
             if (is0(m2)) {
                 m2.x = m0.x;
@@ -163,7 +163,7 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
                     m1.y = m0.y - (-cz * (0.5f*D1/A1) * m0.x);
                     m1.z = m0.z;
                 }
-                h   += (2.0f*A/(cz*cz)) * (m1 - m0);
+                h   += (2.0f*A1/(cz*cz)) * (m1 - m0);
                 h.x -= (D1/cz)*(- m1.y);
                 h.y += (D1/cz)*(- m1.x);
             }
@@ -185,7 +185,7 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
                     m2.y = m0.y - (+cz * (0.5f*D2/A2) * m0.x);
                     m2.z = m0.z;
                 }
-                h   += (2.0f*A/(cz*cz)) * (m2 - m0);
+                h   += (2.0f*A2/(cz*cz)) * (m2 - m0);
                 h.x -= (D2/cz)*(m2.y );
                 h.y += (D2/cz)*(m2.x );
             }
