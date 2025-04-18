@@ -4,19 +4,42 @@
 #include "stencil.h"
 #include "amul.h"
 
-// Exchange + Dzyaloshinskii-Moriya interaction according to
-// Bagdanov and Röβler, PRL 87, 3, 2001. eq.8 (out-of-plane symmetry breaking).
-// Taking into account proper boundary conditions.
-// m: normalized magnetization
-// H: effective field in Tesla
-// D: dmi strength / Msat, in Tesla*m
-// A: Aex/Msat
+// Exchange + Dzyaloshinskii-Moriya interaction for thin film.
+// 
+// Following Bogdanov and Röβler, PRL 87, 037203 (2001), Eq. (6) (out-of-plane symmetry breaking).
+// Derived by Felipe Garcia-Sanchez 
+//
+// Energy:
+//
+// 	E  = D (Mx dzMy - My dzMx)
+//
+// Effective field:
+//
+// 	Hx = 2A/Bs nabla²Mx - 2D/Bs dzMy
+// 	Hy = 2A/Bs nabla²My + 2D/Bs dzMx
+// 	Hz = 2A/Bs nabla²Mz
+//
+// Boundary conditions:
+//
+// 	        2A dxMx = 0
+// 	        2A dxMy = 0
+// 	        2A dxMz = 0
+//
+// 	        2A dyMx = 0
+// 	        2A dyMy = 0
+// 	        2A dyMz = 0
+//
+// 	-D My + 2A dzMx = 0
+// 	+D Mx + 2A dzMy = 0
+// 	        2A dzMz = 0
+//
 extern "C" __global__ void
-adddmi(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ Hz,
-       float* __restrict__ mx, float* __restrict__ my, float* __restrict__ mz,
-       float* __restrict__ Ms_, float Ms_mul,
-       float* __restrict__ aLUT2d, float* __restrict__ dLUT2d, uint8_t* __restrict__ regions,
-       float cx, float cy, float cz, int Nx, int Ny, int Nz, uint8_t PBC, uint8_t OpenBC) {
+adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ Hz,
+           float* __restrict__ mx, float* __restrict__ my, float* __restrict__ mz,
+           float* __restrict__ Ms_, float Ms_mul,
+           float* __restrict__ aLUT2d, float* __restrict__ DLUT2d,
+           uint8_t* __restrict__ regions,
+           float cx, float cy, float cz, int Nx, int Ny, int Nz, uint8_t PBC, uint8_t OpenBC) {
 
     int ix = blockIdx.x * blockDim.x + threadIdx.x;
     int iy = blockIdx.y * blockDim.y + threadIdx.y;
@@ -36,27 +59,25 @@ adddmi(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ Hz,
         return;
     }
 
-    // x derivatives (along length)
+    // x derivatives (along length)  – These should be trivial open boundary conditions
     {
         float3 m1 = make_float3(0.0f, 0.0f, 0.0f);     // left neighbor
         i_ = idx(lclampx(ix-1), iy, iz);               // load neighbor m if inside grid, keep 0 otherwise
         if (ix-1 >= 0 || PBCx) {
             m1 = make_float3(mx[i_], my[i_], mz[i_]);
         }
-        int r1 = is0(m1)? r0 : regions[i_];                // don't use inter region params if m1=0
-        float A1 = aLUT2d[symidx(r0, r1)];                 // inter-region Aex
-        float D1 = dLUT2d[symidx(r0, r1)];                 // inter-region Dex
-        if (!is0(m1) || !OpenBC){                          // do nothing at an open boundary
-            if (is0(m1)) {                                 // neighbor missing
-                m1.x = m0.x - (-cx * (0.5f*D1/A1) * m0.z); // extrapolate missing m from Neumann BC's
+        int r1 = is0(m1)? r0 : regions[i_];
+        float A = aLUT2d[symidx(r0, r1)];
+        if (!is0(m1) || !OpenBC){                      // do nothing at an open boundary
+            if (is0(m1)) {                             // neighbor missing
+                m1.x = m0.x;
                 m1.y = m0.y;
-                m1.z = m0.z + (-cx * (0.5f*D1/A1) * m0.x);
+                m1.z = m0.z;
             }
-            h   += (2.0f*A1/(cx*cx)) * (m1 - m0);          // exchange
-            h.x += (D1/cx)*(- m1.z);
-            h.z -= (D1/cx)*(- m1.x);
+            h   += (2.0f*A/(cx*cx)) * (m1 - m0);       // exchange only
         }
     }
+
 
     {
         float3 m2 = make_float3(0.0f, 0.0f, 0.0f);     // right neighbor
@@ -64,22 +85,19 @@ adddmi(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ Hz,
         if (ix+1 < Nx || PBCx) {
             m2 = make_float3(mx[i_], my[i_], mz[i_]);
         }
-        int r2 = is0(m2)? r0 : regions[i_];
-        float A2 = aLUT2d[symidx(r0, r2)];
-        float D2 = dLUT2d[symidx(r0, r2)];
+        int r1 = is0(m2)? r0 : regions[i_];
+        float A = aLUT2d[symidx(r0, r1)];
         if (!is0(m2) || !OpenBC){
             if (is0(m2)) {
-                m2.x = m0.x - (cx * (0.5f*D2/A2) * m0.z);
+                m2.x = m0.x;
                 m2.y = m0.y;
-                m2.z = m0.z + (cx * (0.5f*D2/A2) * m0.x);
+                m2.z = m0.z;
             }
-            h   += (2.0f*A2/(cx*cx)) * (m2 - m0);
-            h.x += (D2/cx)*(m2.z);
-            h.z -= (D2/cx)*(m2.x);
+            h   += (2.0f*A/(cx*cx)) * (m2 - m0);
         }
     }
 
-    // y derivatives (along width)
+    // y derivatives (along width) – These should be trivial open boundary conditions
     {
         float3 m1 = make_float3(0.0f, 0.0f, 0.0f);
         i_ = idx(ix, lclampy(iy-1), iz);
@@ -87,17 +105,14 @@ adddmi(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ Hz,
             m1 = make_float3(mx[i_], my[i_], mz[i_]);
         }
         int r1 = is0(m1)? r0 : regions[i_];
-        float A1 = aLUT2d[symidx(r0, r1)];
-        float D1 = dLUT2d[symidx(r0, r1)];
+        float A = aLUT2d[symidx(r0, r1)];
         if (!is0(m1) || !OpenBC){
             if (is0(m1)) {
                 m1.x = m0.x;
-                m1.y = m0.y - (-cy * (0.5f*D1/A1) * m0.z);
-                m1.z = m0.z + (-cy * (0.5f*D1/A1) * m0.y);
+                m1.y = m0.y;
+                m1.z = m0.z;
             }
-            h   += (2.0f*A1/(cy*cy)) * (m1 - m0);
-            h.y += (D1/cy)*(- m1.z);
-            h.z -= (D1/cy)*(- m1.y);
+            h   += (2.0f*A/(cy*cy)) * (m1 - m0);
         }
     }
 
@@ -107,18 +122,15 @@ adddmi(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ Hz,
         if  (iy+1 < Ny || PBCy) {
             m2 = make_float3(mx[i_], my[i_], mz[i_]);
         }
-        int r2 = is0(m2)? r0 : regions[i_];
-        float A2 = aLUT2d[symidx(r0, r2)];
-        float D2 = dLUT2d[symidx(r0, r2)];
+        int r1 = is0(m2)? r0 : regions[i_];
+        float A = aLUT2d[symidx(r0, r1)];
         if (!is0(m2) || !OpenBC){
             if (is0(m2)) {
                 m2.x = m0.x;
-                m2.y = m0.y - (cy * (0.5f*D2/A2) * m0.z);
-                m2.z = m0.z + (cy * (0.5f*D2/A2) * m0.y);
+                m2.y = m0.y;
+                m2.z = m0.z;
             }
-            h   += (2.0f*A2/(cy*cy)) * (m2 - m0);
-            h.y += (D2/cy)*(m2.z);
-            h.z -= (D2/cy)*(m2.y);
+            h   += (2.0f*A/(cy*cy)) * (m2 - m0);
         }
     }
 
@@ -126,20 +138,48 @@ adddmi(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ Hz,
     if (Nz != 1) {
         // bottom neighbor
         {
-            i_  = idx(ix, iy, lclampz(iz-1));
-            float3 m1  = make_float3(mx[i_], my[i_], mz[i_]);
-            m1  = ( is0(m1)? m0: m1 );                         // Neumann BC
-            float A1 = aLUT2d[symidx(r0, regions[i_])];
-            h += (2.0f*A1/(cz*cz)) * (m1 - m0);                // Exchange only
+            float3 m1 = make_float3(0.0f, 0.0f, 0.0f);
+            i_ = idx(ix, iy, lclampz(iz-1));
+            if (iz-1 >= 0 || PBCz) {
+                m1 = make_float3(mx[i_], my[i_], mz[i_]);
+            }
+            int r1 = is0(m1)? r0 : regions[i_];
+            float A = aLUT2d[symidx(r0, r1)];
+            float D = DLUT2d[symidx(r0, r1)];
+            float D_2A = D/(2.0f*A);
+            if (!is0(m1) || !OpenBC){
+                if (is0(m1)) {
+                    m1.x = m0.x + (-cz * D_2A * m0.y);
+                    m1.y = m0.y - (-cz * D_2A * m0.x);
+                    m1.z = m0.z;
+                }
+                h   += (2.0f*A/(cz*cz)) * (m1 - m0);
+                h.x -= (D/cz)*(- m1.y);
+                h.y += (D/cz)*(- m1.x);
+            }
         }
 
         // top neighbor
         {
-            i_  = idx(ix, iy, hclampz(iz+1));
-            float3 m2  = make_float3(mx[i_], my[i_], mz[i_]);
-            m2  = ( is0(m2)? m0: m2 );
-            float A2 = aLUT2d[symidx(r0, regions[i_])];
-            h += (2.0f*A2/(cz*cz)) * (m2 - m0);
+            float3 m2 = make_float3(0.0f, 0.0f, 0.0f);
+            i_ = idx(ix, iy, hclampz(iz+1));
+            if (iz+1 < Nz || PBCz) {
+                m2 = make_float3(mx[i_], my[i_], mz[i_]);
+            }
+            int r1 = is0(m2)? r0 : regions[i_];
+            float A = aLUT2d[symidx(r0, r1)];
+            float D = DLUT2d[symidx(r0, r1)];
+            float D_2A = D/(2.0f*A);
+            if (!is0(m2) || !OpenBC){
+                if (is0(m2)) {
+                    m2.x = m0.x + (+cz * D_2A * m0.y);
+                    m2.y = m0.y - (+cz * D_2A * m0.x);
+                    m2.z = m0.z;
+                }
+                h   += (2.0f*A/(cz*cz)) * (m2 - m0);
+                h.x -= (D/cz)*(m2.y );
+                h.y += (D/cz)*(m2.x );
+            }
         }
     }
 

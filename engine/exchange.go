@@ -1,7 +1,7 @@
 package engine
 
 // Exchange interaction (Heisenberg + Dzyaloshinskii-Moriya)
-// See also cuda/exchange.cu and cuda/dmi.cu
+// See also cuda/exchange.cu, cuda/dmi.cu, cuda/dmibulk.cu, cuda/dmifilm.cu
 
 import (
 	"math"
@@ -17,9 +17,11 @@ var (
 	Aex    = NewScalarParam("Aex", "J/m", "Exchange stiffness", &lex2)
 	Dind   = NewScalarParam("Dind", "J/m2", "Interfacial Dzyaloshinskii-Moriya strength", &din2)
 	Dbulk  = NewScalarParam("Dbulk", "J/m2", "Bulk Dzyaloshinskii-Moriya strength", &dbulk2)
+	Dfilm  = NewScalarParam("Dfilm", "J/m2", "Film Dzyaloshinskii-Moriya strength", &dfilm2)
 	lex2   exchParam // inter-cell Aex
 	din2   exchParam // inter-cell Dind
 	dbulk2 exchParam // inter-cell Dbulk
+	dfilm2 exchParam // inter-cell Dfilm
 
 	B_exch     = NewVectorField("B_exch", "T", "Exchange field", AddExchangeField)
 	E_exch     = NewScalarValue("E_exch", "J", "Total exchange energy (including the DMI energy)", GetExchangeEnergy)
@@ -44,23 +46,27 @@ func init() {
 	lex2.init(Aex)
 	din2.init(Dind)
 	dbulk2.init(Dbulk)
+	dfilm2.init(Dfilm)
 }
 
 // Adds the current exchange field to dst
 func AddExchangeField(dst *data.Slice) {
 	inter := !Dind.isZero()
 	bulk := !Dbulk.isZero()
+	film := !Dfilm.isZero()
 	ms := Msat.MSlice()
 	defer ms.Recycle()
 	switch {
-	case !inter && !bulk:
+	case !inter && !bulk && !film:
 		cuda.AddExchange(dst, M.Buffer(), lex2.Gpu(), ms, regions.Gpu(), M.Mesh())
-	case inter && !bulk:
+	case inter && !bulk && !film:
 		Refer("mulkers2017")
 		cuda.AddDMI(dst, M.Buffer(), lex2.Gpu(), din2.Gpu(), ms, regions.Gpu(), M.Mesh(), OpenBC) // dmi+exchange
-	case bulk && !inter:
+	case bulk && !inter && !film:
 		cuda.AddDMIBulk(dst, M.Buffer(), lex2.Gpu(), dbulk2.Gpu(), ms, regions.Gpu(), M.Mesh(), OpenBC) // dmi+exchange
-		// TODO: add ScaleInterDbulk and InterDbulk
+	case film && !inter && !bulk:
+		cuda.AddDMIFilm(dst, M.Buffer(), lex2.Gpu(), dfilm2.Gpu(), ms, regions.Gpu(), M.Mesh(), OpenBC) // dmi+exchange	
+		// TODO: add ScaleInterDbulk, InterDbulk, ScaleInterDfilm, InterDfilm
 	case inter && bulk:
 		util.Fatal("Cannot have interfacial-induced DMI and bulk DMI at the same time")
 	}
