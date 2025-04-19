@@ -6,28 +6,27 @@
 
 // Exchange + Dzyaloshinskii-Moriya interaction for thin film.
 // 
-// Following Bogdanov and Röβler, PRL 87, 037203 (2001), Eqs. (6) and (8) (out-of-plane symmetry breaking).
+// Following Bogdanov and Röβler, PRL 87, 037203 (2001), Eq. (6) (out-of-plane symmetry breaking).
 // Derived by Felipe Garcia-Sanchez 
 //
 // Energy:
-//      E  = D [ (Mz dxMx - Mx dxMz) + (Mz dyMz - My dyMz) + (Mx dzMy - My dzMx) ]
-// (Note that the last term is the new term due to Eq. (6))
+//      E  = D (Mx dzMy - My dzMx)
 //
 // Effective field:
 //
-// 	Hx = 2A/Bs nabla²Mx + 2D/Bs dxMz - 2D/Bs dzMy
-// 	Hy = 2A/Bs nabla²My + 2D/Bs dyMz + 2D/Bs dzMx
-// 	Hz = 2A/Bs nabla²Mz - 2D/Bs dxMx - 2D/Bs dyMy
+// 	Hx = 2A/Bs nabla²Mx - 2D/Bs dzMy
+// 	Hy = 2A/Bs nabla²My + 2D/Bs dzMx
+// 	Hz = 2A/Bs nabla²Mz
 //
 // Boundary conditions:
 //
-// 	+D Mz + 2A dxMx = 0
+// 	        2A dxMx = 0
 // 	        2A dxMy = 0
-// 	-D Mx + 2A dxMz = 0
+// 	        2A dxMz = 0
 //
 // 	        2A dyMx = 0
-// 	+D Mz + 2A dyMy = 0
-// 	-D My + 2A dyMz = 0
+// 	        2A dyMy = 0
+// 	        2A dyMz = 0
 //
 // 	-D My + 2A dzMx = 0
 // 	+D Mx + 2A dzMy = 0
@@ -59,7 +58,7 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         return;
     }
 
-     // x derivatives (along length)
+     // x derivatives (along length) – Only trivial exchange terms
      {
         float3 m1 = make_float3(0.0f, 0.0f, 0.0f);     // left neighbour
         i_ = idx(lclampx(ix-1), iy, iz);               // load neighbour m if inside grid, keep 0 otherwise
@@ -68,16 +67,13 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r1 = is0(m1)? r0 : regions[i_];                // don't use inter region params if m1=0
         float A1 = aLUT2d[symidx(r0, r1)];                 // inter-region Aex
-        float D1 = DLUT2d[symidx(r0, r1)];                 // inter-region Dex
         if (!is0(m1) || !OpenBC){                          // do nothing at an open boundary
             if (is0(m1)) {                                 // neighbour missing
-                m1.x = m0.x - (-cx * (0.5f*D1/A1) * m0.z); // extrapolate missing m from Neumann BC's
+                m1.x = m0.x;                               // extrapolate missing m from Neumann BC's
                 m1.y = m0.y;
-                m1.z = m0.z + (-cx * (0.5f*D1/A1) * m0.x);
+                m1.z = m0.z;
             }
-            h   += (2.0f*A1/(cx*cx)) * (m1 - m0);          // exchange
-            h.x += (D1/cx)*(- m1.z);
-            h.z -= (D1/cx)*(- m1.x);
+            h   += (2.0f*A1/(cx*cx)) * (m1 - m0);      // exchange
         }
     }
 
@@ -89,20 +85,17 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r2 = is0(m2)? r0 : regions[i_];
         float A2 = aLUT2d[symidx(r0, r2)];
-        float D2 = DLUT2d[symidx(r0, r2)];
         if (!is0(m2) || !OpenBC){
             if (is0(m2)) {
-                m2.x = m0.x - (cx * (0.5f*D2/A2) * m0.z);
+                m2.x = m0.x;
                 m2.y = m0.y;
-                m2.z = m0.z + (cx * (0.5f*D2/A2) * m0.x);
+                m2.z = m0.z;
             }
             h   += (2.0f*A2/(cx*cx)) * (m2 - m0);
-            h.x += (D2/cx)*(m2.z);
-            h.z -= (D2/cx)*(m2.x);
         }
     }
 
-    // y derivatives (along width)
+    // y derivatives (along width) – Only trivial exchange terms
     {
         float3 m1 = make_float3(0.0f, 0.0f, 0.0f);
         i_ = idx(ix, lclampy(iy-1), iz);
@@ -111,16 +104,13 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r1 = is0(m1)? r0 : regions[i_];
         float A1 = aLUT2d[symidx(r0, r1)];
-        float D1 = DLUT2d[symidx(r0, r1)];
         if (!is0(m1) || !OpenBC){
             if (is0(m1)) {
                 m1.x = m0.x;
-                m1.y = m0.y - (-cy * (0.5f*D1/A1) * m0.z);
-                m1.z = m0.z + (-cy * (0.5f*D1/A1) * m0.y);
+                m1.y = m0.y;
+                m1.z = m0.z;
             }
             h   += (2.0f*A1/(cy*cy)) * (m1 - m0);
-            h.y += (D1/cy)*(- m1.z);
-            h.z -= (D1/cy)*(- m1.y);
         }
     }
 
@@ -132,16 +122,13 @@ adddmifilm(float* __restrict__ Hx, float* __restrict__ Hy, float* __restrict__ H
         }
         int r2 = is0(m2)? r0 : regions[i_];
         float A2 = aLUT2d[symidx(r0, r2)];
-        float D2 = DLUT2d[symidx(r0, r2)];
         if (!is0(m2) || !OpenBC){
             if (is0(m2)) {
                 m2.x = m0.x;
-                m2.y = m0.y - (cy * (0.5f*D2/A2) * m0.z);
-                m2.z = m0.z + (cy * (0.5f*D2/A2) * m0.y);
+                m2.y = m0.y;
+                m2.z = m0.z;
             }
             h   += (2.0f*A2/(cy*cy)) * (m2 - m0);
-            h.y += (D2/cy)*(m2.z);
-            h.z -= (D2/cy)*(m2.y);
         }
     }
 
