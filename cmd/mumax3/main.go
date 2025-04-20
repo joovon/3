@@ -163,20 +163,28 @@ func goServeGUI() string {
 
 // print version to stdout
 func printVersion() {
+	name, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+
 	engine.LogOut(engine.UNAME)
+	engine.LogOut(fmt.Sprintf("Hostname: %s", name))
 	engine.LogOut(fmt.Sprintf("GPU info: %s, using cc=%d PTX", cuda.GPUInfo, cuda.UseCC))
 	engine.LogOut("(c) Arne Vansteenkiste, Dynamat LAB, Ghent University, Belgium")
 	engine.LogOut("This is free software without any warranty. See license.txt")
-	engine.LogOut("********************************************************************//")
-	engine.LogOut("  If you use mumax in any work or publication,                      //")
-	engine.LogOut("  we kindly ask you to cite the references in references.bib        //")
+	engine.LogOut("********************************************************************")
+	engine.LogOut("  If you use mumax in any work or publication,                      ")
+	engine.LogOut("  we kindly ask you to cite the references in references.bib        ")
 	engine.LogOut(" ")
-	engine.LogOut("  This version includes the following extensions: ")
+	engine.LogOut("  This version provides the following extensions: ")
 	engine.LogOut("  • arrayfromfile")
+	engine.LogOut("  • Dfilm")
+	engine.LogOut("  • ext_coreposTB")
 	engine.LogOut("  • ext_eigenmodeprojection(500)")
 	engine.LogOut("  • ext_eigenmodeprojectionReIm(500)")
 	engine.LogOut("  • ext_reversedspins")
 	engine.LogOut("  • functionfromfile")
 	engine.LogOut("  • strayfield")
-	engine.LogOut("********************************************************************//")
+	engine.LogOut("********************************************************************")
 }
