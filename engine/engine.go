@@ -22,9 +22,9 @@ import (
 	"github.com/mumax/3/timer"
 )
 
-const VERSION = "mumax 3.10"
+const VERSION = "mumax 3.10 (build joovon.20250420)"
 
-var UNAME = fmt.Sprintf("%s [%s_%s %s(%s) CUDA-%d.%d]",
+var UNAME = fmt.Sprintf("  %s [%s_%s %s(%s) CUDA-%d.%d]",
 	VERSION, runtime.GOOS, runtime.GOARCH, runtime.Version(), runtime.Compiler,
 	cu.CUDA_VERSION/1000, (cu.CUDA_VERSION%1000)/10)
 
